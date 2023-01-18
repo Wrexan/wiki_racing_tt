@@ -1,0 +1,16 @@
+__pycache__
+.idea
+*.ini
+*.pyc
+task*.jpg
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
+pg_data
