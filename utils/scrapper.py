@@ -26,22 +26,22 @@ class Scrapper:
 
         raw_html = self.soup.find('body')
         if not raw_html:
-            print(f'Scrapper error: URL have no body: {url}')
+            # print(f'Scrapper error: URL have no body: {url}')
             return links
 
         raw_html = raw_html.find('div', id='bodyContent')
         if not raw_html:
-            print(f'Scrapper error: URL have no id="bodyContent": {url}')
+            # print(f'Scrapper error: URL have no id="bodyContent": {url}')
             return links
 
         raw_html = raw_html.find('div', class_='mw-parser-output')
         if not raw_html:
-            print(f'Scrapper error: URL have no class_="mw-parser-output": {url}')
+            # print(f'Scrapper error: URL have no class_="mw-parser-output": {url}')
             return links
 
         raw_links = raw_html.find_all('a', href=href_mask, class_=None, limit=limit)
         if not raw_links:
-            print(f'Scrapper error: URL have no links: {url}')
+            # print(f'Scrapper error: URL have no links: {url}')
             return links
 
         for link in raw_links:

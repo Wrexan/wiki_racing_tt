@@ -48,8 +48,9 @@ class WikiRacer:
             print(f'================DEEPNESS - {self.current_deepness}=================')
             self.get_parsed_links()
 
-        if self.result_found:
-            print(f'FOUND RESULT = {self.result_branch}')
+            if self.result_found:
+                print(f'FOUND RESULT = {self.result_branch}')
+                break
         else:
             print(f'NOT FOUND. LAST RESULT = {self.result_branch}')
 
@@ -99,15 +100,16 @@ class WikiRacer:
                         print(f'FOUND {link}')
 
                         self.result_branch.append(self.finish_page_name)
-                        for revers_deepness in range(inner_deepness+1, 0, -1):
-                            print(f'+++{revers_deepness=} {link=}')
+                        page_to_check = link
+                        for revers_deepness in range(inner_deepness, 0, -1):
+                            print(f'+++{revers_deepness=} {page_to_check=}')
                             for backward_page, backward_links in self.tree_cache[revers_deepness].items():
-                                if link in backward_links:
+                                if page_to_check in backward_links:
                                     page_to_check = backward_page
                                     self.result_branch.append(page_to_check)
                         self.result_branch.reverse()
                         self.result_found = True
-                        # break
+                        break
 
                 if self.result_found:
                     break
