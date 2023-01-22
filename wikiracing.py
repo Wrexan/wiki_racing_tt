@@ -128,7 +128,7 @@ class WikiRacer:
                 href_mask=self.href_mask,
                 limit=links_per_page)
 
-            self.db.cache_pages_relations(self.table_name, (current_page,), pages)
+            self.db.cache_pages_relations(self.table_name, current_page, pages)
             print(f'{self.current_deepness}-URL: ', end='')
         return pages
 
