@@ -45,7 +45,9 @@ class Scrapper:
             return links
 
         for link in raw_links:
-            links.append(link.get('title'))
+            page_title = link.get('title')
+            if page_title:
+                links.append(page_title)
         return links
 
     # def disassemble_dom(self, url):
@@ -73,4 +75,4 @@ class Scrapper:
         if delay > 0:
             time.sleep(delay)
         else:
-            print(f'LAG: {-delay=} sec')
+            print(f'GLOBAL LAG: {-delay=} sec')

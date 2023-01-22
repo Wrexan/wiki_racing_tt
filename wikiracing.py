@@ -138,5 +138,6 @@ class WikiRacer:
 if __name__ == '__main__':
     game = WikiRacer()
     game.find_path('Дружба', 'Рим')
-    # game.find_path('Дружба', 'Столиця')
-    # game.find_path('Дружба', 'Федеральний округ')
+    game.find_path('Дружба', 'Столиця')
+    game.find_path('Дружба', 'Федеральний округ')
+    # game.find_path('Географія Бутану', 'Федеральний округ')
