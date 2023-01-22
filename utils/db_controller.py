@@ -73,11 +73,11 @@ class DBController:
         page_id_tuple = self.cursor.fetchone()
         return page_id_tuple[0] if page_id_tuple else None
 
-    def get_related_pages(self, table_name: str, page_id: int):
+    def get_related_pages(self, table_name: str, page_id: int) -> tuple[tuple, ...]:
         self.cursor.execute(f"SELECT page_name FROM {table_name} WHERE id IN ("
                             f"SELECT child_id FROM {self.table_names[table_name]} "
                             f"WHERE parent_id = %s)", (page_id,))
-        return self.cursor.fetchall()
+        return *self.cursor.fetchall(),
 
     def cache_pages_relations(self, table_name: str, parent: tuple, children: tuple):
         """Stores page names and uris in links table and creates Many-to-Many relations'"""

@@ -4,7 +4,7 @@ from utils.db_controller import DBController
 from utils.scrapper import Scrapper
 
 requests_per_minute = 100
-links_per_page = 20
+links_per_page = 200
 
 
 class WikiRacer:
@@ -16,20 +16,19 @@ class WikiRacer:
         self.table_name = 'pages'
         self.db = DBController()
         self.scrapper = Scrapper(requests_per_minute=requests_per_minute)
-        self.current_branch: list = []
+        self.result_branch: list = []
         self.current_deepness = 0
-        self.max_deepness = 3
+        self.max_deepness = 5
         self.finish_page_name: str = ''
-        self.tree_cache: {int: list} = {}
+        self.tree_cache: dict[int: dict[tuple[str]: tuple[...]]] = {}
 
-        self.SEARCH = 0
-        self.RESULT_FOUNDED = 1
-        self.FINISHED = 2
-        self.status = self.SEARCH
+        self.result_found = False
 
     def find_path(self, start: str, finish: str) -> List[str]:
-        self.current_branch.append(start)
-        self.tree_cache[self.current_deepness] = [(start,)]
+        # self.current_branch.append(start)
+        # self.tree_cache[self.current_deepness] = {(start,): []}
+        self.tree_cache[self.current_deepness] = {(): ((start,),)}
+        # self.tree_cache = {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
         # self.current_deepness = 2
         self.finish_page_name = finish
 
@@ -47,98 +46,63 @@ class WikiRacer:
 
         for step in range(self.max_deepness):
             self.current_deepness = step
-            self.get_parsed_links(page=(start,))
+            # self.tree_cache[self.current_deepness] = {}
+            print(f'================DEEPNESS - {self.current_deepness}=================')
+            self.get_parsed_links()
 
-        if self.status == self.RESULT_FOUNDED:
-            print(f'FOUND RESULT = {self.current_branch}')
+        if self.result_found:
+            print(f'FOUND RESULT = {self.result_branch}')
         else:
-            print(f'NOT FOUND. LAST RESULT = {self.current_branch}')
+            print(f'NOT FOUND. LAST RESULT = {self.result_branch}')
 
         self.db.cursor.close()
         self.db.connection.close()
         # print(f'{links=}')
         # return links
 
-    def get_parsed_links(self, page: tuple, in_cycle: bool = False):
+    def get_parsed_links(self):
 
-        if self.status == self.FINISHED:
+        if self.result_found:
             return
 
-        self.current_branch[-1] = page[0]
+        for inner_deepness in range(self.current_deepness + 1):
+            for page, links in self.tree_cache[inner_deepness].items():
+                for link in links:
+                    print(f'{link=} ')
 
-        # getting current page from branch
-        pages = self.get_pages(current_page_name=page[0])
-        # print(f'{pages=}')
+                    pages = self.get_pages(link[0])
+                    # {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
+                    if not self.tree_cache.get(inner_deepness+1):
+                        self.tree_cache[inner_deepness+1] = {}
+                    self.tree_cache[inner_deepness+1][link] = pages
 
-        overstep = 1 if not in_cycle else 2
-        if not self.tree_cache.get(self.current_deepness+overstep):
-            print(f'extending')
-            self.tree_cache[self.current_deepness+overstep] = []
-        self.tree_cache[self.current_deepness+overstep].extend(pages)
+                    # print(f'TREE={self.tree_cache.get(self.current_deepness)}')
+                    # print(f'-BRANCH={self.current_branch}')
+                    # print(f'-TREE={self.tree_cache}')
+                    # print(f'-PAGES={pages}\n')
+                    if not self.result_found:
+                        for page_to_check in pages:
+                            if page_to_check[0] == self.finish_page_name:
+                                print(f'FOUND {page_to_check[0]}')
 
-        # print(f'TREE={self.tree_cache.get(self.current_deepness)}')
-        print(f'-BRANCH={self.current_branch}')
-        print(f'-TREE={self.tree_cache}')
-        # print(f'-PAGES={pages}\n')
+                                self.result_branch.append(self.finish_page_name)
+                                for revers_deepness in range(inner_deepness+1, 0, -1):
+                                    print(f'+++{revers_deepness=} {page_to_check=}')
+                                    for page, links in self.tree_cache[revers_deepness].items():
+                                        if page_to_check in links:
+                                            page_to_check = page
+                                            self.result_branch.append(page_to_check[0])
+                                self.result_branch.reverse()
+                                self.result_found = True
+                                break
+                    # if self.result_found:
+                    #     break
 
-        for page_to_check in pages:
-            if page_to_check == self.finish_page_name:
-                print(f'FOUND {page_to_check=}')
-                print(f'{self.current_branch},{self.finish_page_name}')
-                self.current_branch.append(self.finish_page_name)
-                self.status = self.RESULT_FOUNDED
+                if self.result_found:
+                    break
 
-        # returning only after full page scan
-        if self.status == self.RESULT_FOUNDED:
-            self.status = self.FINISHED
-            return
-
-        if not in_cycle:
-            self.current_branch.append(None)
-            # print(f'{self.tree_cache[self.current_deepness]=}')
-            for next_page in self.tree_cache[self.current_deepness+1]:
-                print(f'{next_page=}')
-                self.get_parsed_links(page=next_page, in_cycle=True)
-
-        # if self.current_deepness > self.max_deepness:
-        #     self.status = self.FINISHED
-        #     return
-
-        # self.current_deepness += 1
-
-
-        # print(f'-ALL={self.tree_cache}\n')
-        # for next_page in self.tree_cache[self.current_deepness-1]:
-        #     self.get_parsed_links(page=next_page, go_deeper=True)
-
-        # if not self.dependencies_tree_cache.get(self.current_deepness):
-        #     print(f'extending')
-        #     self.dependencies_tree_cache[self.current_deepness] = []
-        # self.dependencies_tree_cache[self.current_deepness].extend(pages)
-
-        # if go_deeper:
-        #     print(f'{"=" * self.current_deepness}> going deeper')
-        #     self.current_branch.append(None)
-        #
-        #     self.current_deepness += 1
-        #     for link in pages:
-        #         self.current_branch[-1] = link[0]
-        #         pages = pages or self.get_pages(current_page_name=self.current_branch[-1])
-        #         self.get_parsed_links(pages=pages, go_deeper=False)
-        #
-        #     if self.current_deepness > self.max_deepness:
-        #         self.status = self.FINISHED
-        #         return
-
-            # self.dependencies_tree_cache[self.current_deepness] = []
-            #
-            # self.current_pages_branch.append(None)
-            #
-            # print(f'{self.dependencies_tree_cache=}')
-            # for branch in self.dependencies_tree_cache[self.current_deepness - 1]:
-            #     print(f'{branch[0]=}')
-            #     self.current_pages_branch[-1] = branch[0]
-            #     self.get_parsed_links(go_deeper=True)
+            if self.result_found:
+                break
         return
 
     def get_pages(self, current_page_name):
@@ -157,64 +121,9 @@ class WikiRacer:
             print(f'{self.current_deepness}-URL: ', end='')
         return pages
 
-    # def get_parsed_links2(self, go_deeper: bool = True):
-    #     if self.status == self.FINISHED:
-    #         return
-    #     # getting current page from branch
-    #     current_page_name = self.current_pages_branch[-1]
-    #     current_uri = f'{self.uri_to_parse}{current_page_name}'
-    #
-    #     cached_id = self.db.get_page_id_if_cached(self.table_name, current_page_name)
-    #     if cached_id:
-    #         pages = self.db.get_related_pages(self.table_name, cached_id)
-    #         print('DBS: ', end='')
-    #     else:
-    #         pages = self.scrapper.scrap_for_linked_pages(
-    #             url=f'{self.site_to_parse}{current_uri}',
-    #             href_mask=self.href_mask,
-    #             limit=links_per_page)
-    #
-    #         self.db.cache_pages_relations(self.table_name, (current_page_name,), pages)
-    #         print('URL: ', end='')
-    #
-    #     print(f'{self.current_pages_branch=}')
-    #     # print(f'{pages=}')
-    #
-    #     for page in pages:
-    #         if page == self.finish_page_name:
-    #             print(f'FOUND {page=}')
-    #             print(f'{self.current_pages_branch},{self.finish_page_name}')
-    #             self.current_pages_branch.append(self.finish_page_name)
-    #             self.status = self.RESULT_FOUNDED
-    #
-    #     # returning only after full page scan
-    #     if self.status == self.RESULT_FOUNDED:
-    #         self.status = self.FINISHED
-    #         return
-    #
-    #     if go_deeper:
-    #         print(f'{"=" * self.current_deepness}> going deeper')
-    #         self.current_pages_branch.append(None)
-    #         for link in pages:
-    #             self.current_pages_branch[-1] = link[0]
-    #             self.get_parsed_links(go_deeper=False)
-    #
-    #         if self.current_deepness <= self.max_deepness:
-    #             self.current_deepness += 1
-    #             self.dependencies_tree_cache[self.current_deepness] = pages
-    #
-    #             print(f'{self.dependencies_tree_cache=}')
-    #             for branch in self.dependencies_tree_cache[self.current_deepness]:
-    #                 print(f'{branch[0]=}')
-    #                 self.current_pages_branch[-1] = branch[0]
-    #                 self.current_pages_branch.append(None)
-    #                 self.get_parsed_links(go_deeper=False)
-    #
-    #             self.get_parsed_links(go_deeper=True)
-    #
-    #     return
-
 
 if __name__ == '__main__':
     game = WikiRacer()
     game.find_path('Дружба', 'Рим')
+    # game.find_path('Дружба', 'Столиця')
+    # game.find_path('Дружба', 'Федеральний округ')
