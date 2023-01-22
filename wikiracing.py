@@ -1,4 +1,5 @@
 import re
+import time
 from typing import List
 from utils.db_controller import DBController
 from utils.scrapper import Scrapper
@@ -11,7 +12,6 @@ class WikiRacer:
     def __init__(self):
         self.site_to_parse = 'https://uk.wikipedia.org'
         self.uri_to_parse = '/wiki/'
-        # self.ignored_title_mask = (re.compile(r'^Спеціальна:*'), re.compile(r'^Вікіпедія:*'))
         self.href_mask = re.compile(rf'^{self.uri_to_parse}*')
         self.table_name = 'pages'
         self.db = DBController()
@@ -25,9 +25,10 @@ class WikiRacer:
         self.result_found = False
 
     def find_path(self, start: str, finish: str) -> List[str]:
-        self.tree_cache[self.current_deepness] = {None: [start]}
+        start_time = time.time()
+
         # self.tree_cache = {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
-        # self.current_deepness = 2
+        self.tree_cache = {self.current_deepness: {None: [start]}}
         self.finish_page_name = finish
 
         self.db.create_connection(
@@ -44,12 +45,10 @@ class WikiRacer:
 
         for step in range(self.max_deepness):
             self.current_deepness = step
-            # self.tree_cache[self.current_deepness] = {}
-            print(f'================DEEPNESS - {self.current_deepness}=================')
             self.get_parsed_links()
 
             if self.result_found:
-                print(f'FOUND RESULT = {self.result_branch}')
+                print(f'RESULT = {self.result_branch} TIME: {time.time() - start_time}')
                 break
         else:
             print(f'NOT FOUND. LAST RESULT = {self.result_branch}')
@@ -67,7 +66,7 @@ class WikiRacer:
         for inner_deepness in range(self.current_deepness + 1):
             for page, links in self.tree_cache[inner_deepness].items():
                 for link in links:
-                    print(f'{link=} ')
+                    # print(f'{link=} ')
 
                     pages = self.get_links_from_db_or_parser(link)
                     # {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
@@ -97,12 +96,10 @@ class WikiRacer:
                     #             break
 
                     if link == self.finish_page_name:
-                        print(f'FOUND {link}')
-
                         self.result_branch.append(self.finish_page_name)
                         page_to_check = link
                         for revers_deepness in range(inner_deepness, 0, -1):
-                            print(f'+++{revers_deepness=} {page_to_check=}')
+                            # print(f'+++{revers_deepness=} {page_to_check=}')
                             for backward_page, backward_links in self.tree_cache[revers_deepness].items():
                                 if page_to_check in backward_links:
                                     page_to_check = backward_page
@@ -138,6 +135,6 @@ class WikiRacer:
 if __name__ == '__main__':
     game = WikiRacer()
     game.find_path('Дружба', 'Рим')
-    game.find_path('Дружба', 'Столиця')
-    game.find_path('Дружба', 'Федеральний округ')
+    # game.find_path('Дружба', 'Столиця')
+    # game.find_path('Дружба', 'Федеральний округ')
     # game.find_path('Географія Бутану', 'Федеральний округ')
