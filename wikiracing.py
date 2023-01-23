@@ -21,11 +21,15 @@ class WikiRacer:
         self.max_deepness = 5
         self.finish_page_name: str = ''
         self.tree_cache: dict[int: dict[str: list[str, ...]]] = {}
+        self.sources = {0: 'DB-', 1: 'WB-'}
+        self.current_source = 1
+        self.page_counter = 0
+        self.start_time = 0
 
         self.result_found = False
 
     def find_path(self, start: str, finish: str) -> List[str]:
-        start_time = time.time()
+        self.start_time = time.time()
 
         # self.tree_cache = {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
         self.tree_cache = {self.current_deepness: {None: [start]}}
@@ -48,14 +52,13 @@ class WikiRacer:
             self.get_parsed_links()
 
             if self.result_found:
-                print(f'RESULT = {self.result_branch} TIME: {time.time() - start_time}')
+                print(f'RESULT: {self.result_branch} TIME: {round(time.time() - self.start_time, 2)}')
                 break
         else:
             print(f'NOT FOUND. LAST RESULT = {self.result_branch}')
 
         self.db.cursor.close()
         self.db.connection.close()
-        # print(f'{links=}')
         # return links
 
     def get_parsed_links(self):
@@ -66,6 +69,10 @@ class WikiRacer:
         for inner_deepness in range(self.current_deepness + 1):
             for page, links in self.tree_cache[inner_deepness].items():
                 for link in links:
+                    self.page_counter += 1
+                    print(f"\r{self.sources[self.current_source]}"
+                          f"{self.current_deepness}-Parsed: "
+                          f"{self.page_counter}", end="")
                     # print(f'{link=} ')
 
                     pages = self.get_links_from_db_or_parser(link)
@@ -74,27 +81,7 @@ class WikiRacer:
                         self.tree_cache[inner_deepness+1] = {}
                     self.tree_cache[inner_deepness+1][link] = pages
 
-                    # print(f'TREE={self.tree_cache.get(self.current_deepness)}')
-                    # print(f'-BRANCH={self.current_branch}')
-                    # print(f'-TREE={self.tree_cache}')
-                    # print(f'-PAGES={pages}\n')
-
-                    # if not self.result_found:
-                    #     for page_to_check in pages:
-                    #         if page_to_check == self.finish_page_name:
-                    #             print(f'FOUND {page_to_check}')
-                    #
-                    #             self.result_branch.append(self.finish_page_name)
-                    #             for revers_deepness in range(inner_deepness+1, 0, -1):
-                    #                 print(f'+++{revers_deepness=} {page_to_check=}')
-                    #                 for backward_page, backward_links in self.tree_cache[revers_deepness].items():
-                    #                     if page_to_check in backward_links:
-                    #                         page_to_check = backward_page
-                    #                         self.result_branch.append(page_to_check)
-                    #             self.result_branch.reverse()
-                    #             self.result_found = True
-                    #             break
-
+                    # do the link is finish?
                     if link == self.finish_page_name:
                         self.result_branch.append(self.finish_page_name)
                         page_to_check = link
@@ -106,20 +93,14 @@ class WikiRacer:
                                     self.result_branch.append(page_to_check)
                         self.result_branch.reverse()
                         self.result_found = True
-                        break
-
-                if self.result_found:
-                    break
-
-            if self.result_found:
-                break
-        return
+                        print('')
+                        return
 
     def get_links_from_db_or_parser(self, current_page):
         cached_id = self.db.get_page_id_if_cached(self.table_name, current_page)
         if cached_id:
             pages = self.db.get_related_pages(self.table_name, cached_id)
-            print(f'{self.current_deepness}-DBS: ', end='')
+            self.current_source = 0
         else:
             current_uri = f'{self.uri_to_parse}{current_page}'
             pages = self.scrapper.scrap_for_linked_pages(
@@ -128,13 +109,16 @@ class WikiRacer:
                 limit=links_per_page)
 
             self.db.cache_pages_relations(self.table_name, current_page, pages)
-            print(f'{self.current_deepness}-URL: ', end='')
+            self.current_source = 1
         return pages
 
 
 if __name__ == '__main__':
     game = WikiRacer()
-    game.find_path('Дружба', 'Рим')
+    # game.find_path('Дружба', 'Рим')
     # game.find_path('Дружба', 'Столиця')
-    # game.find_path('Дружба', 'Федеральний округ')
+    # game.find_path('Мітохондріальна ДНК', 'Вітамін K')
+    game.find_path('Марка (грошова одиниця)', 'Китайський календар')
+    # game.find_path('Фестиваль', 'Пілястра')
+    # game.find_path('Дружина (військо)', '6 жовтня')
     # game.find_path('Географія Бутану', 'Федеральний округ')

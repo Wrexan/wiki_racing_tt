@@ -46,7 +46,7 @@ class Scrapper:
 
         for link in raw_links:
             page_title = link.get('title')
-            if page_title:
+            if page_title and ':' not in page_title:
                 links.append(page_title)
         return links
 
@@ -74,5 +74,5 @@ class Scrapper:
         # make delay for the time left until next allowed request
         if delay > 0:
             time.sleep(delay)
-        else:
-            print(f'GLOBAL LAG: {-delay=} sec')
+        # else:
+        #     print(f'GLOBAL LAG: {-delay=} sec')
