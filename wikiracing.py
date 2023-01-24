@@ -69,17 +69,20 @@ class WikiRacer:
             # print(f'{self.tree_cache=}')
             # print(f'{inner_deepness=}')
             for page, links in self.tree_cache[inner_deepness].items():
-                if page and page[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
-                    print(f'{page=}')
+                # if page and page[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
+                #     print(f'{page=}')
                 for link in links:
                     self.page_counter += 1
                     print(f"\r{self.sources[self.current_source]}"
                           f"{self.current_deepness}-Parsed: "
                           f"{self.page_counter}", end="")
-                    if link[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
-                        print(f'{page=} => {link=} ')
+                    # if link[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
+                    #     print(f'{page=} => {link=} ')
 
                     links_on_page = self.get_links_from_db_or_parser(link)
+                    if not links_on_page:
+                        continue
+
                     # add branches to wide
                     if not self.tree_cache.get(inner_deepness+1):
                         self.tree_cache[inner_deepness+1] = {}
@@ -87,7 +90,6 @@ class WikiRacer:
 
                     # do the link is finish?
                     for next_link in links_on_page:
-                        print(f'{next_link=}')
                         if self.finish_page_name == next_link[1]:
                             self.result_branch.append(self.finish_page_name)
                             page_to_check = next_link
@@ -102,24 +104,24 @@ class WikiRacer:
                             return
 
     def get_links_from_db_or_parser(self, current_page):
-        # cached = self.db.is_link_cashed(self.table_name, current_page[0])
-        # cached_id = self.db.get_page(self.table_name, current_page[1])
-        cached_id: tuple = self.db.get_link_if_cached(self.table_name, current_page[1])
-        if cached_id:
-            # print(f'{cached_id=} {current_page=}')
-            pages = self.db.get_related_pages(self.table_name, cached_id[0])
-            self.current_source = 0
-        else:
+        cached: tuple = self.db.get_link_if_cached(self.table_name, current_page[1])
+
+        if not cached:
+            cached_id = None
             current_uri = f'{self.uri_to_parse}{current_page[1]}'
             pages = self.scrapper.scrap_for_linked_pages(
                 url=f'{self.site_to_parse}{current_uri}',
                 href_mask=self.href_mask,
                 limit=links_per_page)
-
             if pages:
-                self.db.cache_pages_relations(self.table_name, current_page[1], pages)
+                cached_id = self.db.cache_pages_relations(self.table_name, current_page[1], pages)
             self.current_source = 1
-        return pages
+
+        else:
+            cached_id = cached[0]
+            self.current_source = 0
+
+        return self.db.get_related_pages(self.table_name, cached_id) if cached_id else None
 
 
 if __name__ == '__main__':
