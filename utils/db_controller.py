@@ -127,7 +127,7 @@ class DBController:
         return parent_id
 
     def get_most_popular_titles(self, table_name: str, amount: int) -> list[tuple[int, str]]:
-        if not self.cursor:
+        if not self.cursor or self.cursor.closed:
             self.create_connection()
         self.table_names[table_name] = f'{table_name}_{table_name}'
 

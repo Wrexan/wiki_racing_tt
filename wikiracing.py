@@ -24,23 +24,23 @@ class WikiRacer:
         self.max_deepness = 5
         self.finish_page_name: str = ''
         self.tree_cache: dict[int: dict[str: list[str, ...]]] = {}
-        self.sources = {0: 'DB-', 1: 'WB-'}
+        self.sources = {0: 'DB', 1: 'WB'}
         self.current_source = 1
 
         self.result_branch: list = []
+        self.current_deepness = 0
         self.page_counter = 0
         self.start_time = 0
         self.result_found = False
 
     def find_path(self, start: str, finish: str) -> List[str]:
-        self.current_deepness = 0
         self.page_counter = 0
         self.result_branch = []
         self.result_found = False
         self.start_time = time.time()
 
         # self.tree_cache = {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
-        self.tree_cache = {self.current_deepness: {None: [(1, start)]}}
+        self.tree_cache = {0: {None: [(1, start)]}}
         self.finish_page_name = finish
 
         self.db.create_connection()
@@ -126,11 +126,11 @@ class WikiRacer:
 
 if __name__ == '__main__':
     game = WikiRacer()
-    # game.find_path('Дружба', 'Рим')
-    # game.find_path('Мітохондріальна ДНК', 'Вітамін K')
-    # game.find_path('Марка (грошова одиниця)', 'Китайський календар')
-    # game.find_path('Фестиваль', 'Пілястра')
-    # game.find_path('Дружина (військо)', '6 жовтня')
+    game.find_path('Дружба', 'Рим')
+    game.find_path('Мітохондріальна ДНК', 'Вітамін K')
+    game.find_path('Марка (грошова одиниця)', 'Китайський календар')
+    game.find_path('Фестиваль', 'Пілястра')
+    game.find_path('Дружина (військо)', '6 жовтня')
 
     print(f'Most popular: {game.db.get_most_popular_titles(table_name=game.table_name, amount=5)}')
 
