@@ -16,19 +16,22 @@ class WikiRacer:
         self.table_name = 'pages'
         self.db = DBController()
         self.scrapper = Scrapper(requests_per_minute=requests_per_minute)
-        self.result_branch: list = []
-        self.current_deepness = 0
         self.max_deepness = 5
         self.finish_page_name: str = ''
         self.tree_cache: dict[int: dict[str: list[str, ...]]] = {}
         self.sources = {0: 'DB-', 1: 'WB-'}
         self.current_source = 1
+
+        self.result_branch: list = []
         self.page_counter = 0
         self.start_time = 0
-
         self.result_found = False
 
     def find_path(self, start: str, finish: str) -> List[str]:
+        self.current_deepness = 0
+        self.page_counter = 0
+        self.result_branch = []
+        self.result_found = False
         self.start_time = time.time()
 
         # self.tree_cache = {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
@@ -66,18 +69,12 @@ class WikiRacer:
         if self.result_found:
             return
         for inner_deepness in range(self.current_deepness + 1):
-            # print(f'{self.tree_cache=}')
-            # print(f'{inner_deepness=}')
             for page, links in self.tree_cache[inner_deepness].items():
-                # if page and page[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
-                #     print(f'{page=}')
                 for link in links:
                     self.page_counter += 1
                     print(f"\r{self.sources[self.current_source]}"
                           f"{self.current_deepness}-Parsed: "
                           f"{self.page_counter}", end="")
-                    # if link[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
-                    #     print(f'{page=} => {link=} ')
 
                     links_on_page = self.get_links_from_db_or_parser(link)
                     if not links_on_page:
@@ -92,12 +89,15 @@ class WikiRacer:
                     for next_link in links_on_page:
                         if self.finish_page_name == next_link[1]:
                             self.result_branch.append(self.finish_page_name)
-                            page_to_check = next_link
-                            for revers_deepness in range(inner_deepness + 1, 0, -1):
-                                for backward_page, backward_links in self.tree_cache[revers_deepness].items():
-                                    if page_to_check in backward_links:
-                                        page_to_check = backward_page
+                            self.result_branch.append(link[1])
+                            page_to_check = link
+                            for revers_deepness in range(inner_deepness, 0, -1):
+                                checked_upper_links = []
+                                for upper_parent_page, upper_links in self.tree_cache[revers_deepness].items():
+                                    if page_to_check in upper_links and upper_parent_page not in checked_upper_links:
+                                        page_to_check = upper_parent_page
                                         self.result_branch.append(page_to_check[1])
+                                        checked_upper_links = [*upper_links]
                             self.result_branch.reverse()
                             self.result_found = True
                             print('')
@@ -127,10 +127,11 @@ class WikiRacer:
 if __name__ == '__main__':
     game = WikiRacer()
     game.find_path('Дружба', 'Рим')
-    # game.find_path('Мітохондріальна ДНК', 'Вітамін K')
-    # game.find_path('Марка (грошова одиниця)', 'Китайський календар')
-    # game.find_path('Фестиваль', 'Пілястра')
-    # game.find_path('Дружина (військо)', '6 жовтня')
+    game.find_path('Мітохондріальна ДНК', 'Вітамін K')
+    game.find_path('Марка (грошова одиниця)', 'Китайський календар')
+    game.find_path('Фестиваль', 'Пілястра')
+    game.find_path('Дружина (військо)', '6 жовтня')
+
     # game.find_path('Географія Бутану', 'Федеральний округ')
 
     # game.find_path('Дружба', 'Столиця')

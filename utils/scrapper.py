@@ -51,7 +51,7 @@ class Scrapper:
         if delay > 0:
             time.sleep(delay)
         else:
-            print(f' LAG: {round(delay, 2)} sec', end="")
+            print(f' LAG: {-round(delay, 2)} sec', end="")
             delay = 0
 
         # updating time of the next request
