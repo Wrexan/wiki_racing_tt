@@ -10,11 +10,16 @@ links_per_page = 200
 
 class WikiRacer:
     def __init__(self):
+        self.connection_params = {"host": "localhost",
+                                  "database": "cash_db",
+                                  "user": "postgres",
+                                  "port": 5433,
+                                  "password": "123"}
         self.site_to_parse = 'https://uk.wikipedia.org'
         self.uri_to_parse = '/wiki/'
         self.href_mask = re.compile(rf'^{self.uri_to_parse}*')
         self.table_name = 'pages'
-        self.db = DBController()
+        self.db = DBController(connection_params=self.connection_params)
         self.scrapper = Scrapper(requests_per_minute=requests_per_minute)
         self.max_deepness = 5
         self.finish_page_name: str = ''
@@ -38,12 +43,7 @@ class WikiRacer:
         self.tree_cache = {self.current_deepness: {None: [(1, start)]}}
         self.finish_page_name = finish
 
-        self.db.create_connection(
-            host="localhost",
-            database="cash_db",
-            user="postgres",
-            port=5433,
-            password="123")
+        self.db.create_connection()
         if not self.db.connection:
             return []
 
@@ -81,9 +81,9 @@ class WikiRacer:
                         continue
 
                     # add branches to wide
-                    if not self.tree_cache.get(inner_deepness+1):
-                        self.tree_cache[inner_deepness+1] = {}
-                    self.tree_cache[inner_deepness+1][link] = links_on_page
+                    if not self.tree_cache.get(inner_deepness + 1):
+                        self.tree_cache[inner_deepness + 1] = {}
+                    self.tree_cache[inner_deepness + 1][link] = links_on_page
 
                     # do the link is finish?
                     for next_link in links_on_page:
@@ -126,11 +126,13 @@ class WikiRacer:
 
 if __name__ == '__main__':
     game = WikiRacer()
-    game.find_path('Дружба', 'Рим')
-    game.find_path('Мітохондріальна ДНК', 'Вітамін K')
-    game.find_path('Марка (грошова одиниця)', 'Китайський календар')
-    game.find_path('Фестиваль', 'Пілястра')
-    game.find_path('Дружина (військо)', '6 жовтня')
+    # game.find_path('Дружба', 'Рим')
+    # game.find_path('Мітохондріальна ДНК', 'Вітамін K')
+    # game.find_path('Марка (грошова одиниця)', 'Китайський календар')
+    # game.find_path('Фестиваль', 'Пілястра')
+    # game.find_path('Дружина (військо)', '6 жовтня')
+
+    print(f'Most popular: {game.db.get_most_popular_titles(table_name=game.table_name, amount=5)}')
 
     # game.find_path('Географія Бутану', 'Федеральний округ')
 
