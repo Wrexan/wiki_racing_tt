@@ -35,7 +35,7 @@ class DBController:
             self.cursor.execute(f'CREATE UNIQUE INDEX title_idx ON {table_name} (id, title);')
             self.connection.commit()
 
-    def create_m2m_relations_table(self, table_name: str):
+    def create_m2m_relations_table(self, table_name: str) -> None:
         """Creates Many-to-Many relation table, rely on 'id'"""
         # check if tables for relations are exist
         if self.is_table_absent(table_name):
@@ -59,28 +59,35 @@ class DBController:
                                 f' (parent_id, child_id);')
             self.connection.commit()
 
-    def is_table_absent(self, table_name: str):
+    def is_table_absent(self, table_name: str) -> bool:
         self.cursor.execute(f"SELECT EXISTS("
                             f"SELECT relname FROM pg_class "
                             f"WHERE relname = '{table_name}');")
         return not self.cursor.fetchone()[0]
 
-    def get_page_id(self, table_name: str, title: str):
+    def get_page(self, table_name: str, title: str) -> tuple[int] | None:
         self.cursor.execute(f"SELECT id FROM {table_name} WHERE title = %s", (title,))
-        page_id_tuple = self.cursor.fetchone()
-        return page_id_tuple[0] if page_id_tuple else None
+        return self.cursor.fetchone()
 
-    def get_page_id_if_cached(self, table_name: str, title: str):
-        self.cursor.execute(f"SELECT parent_id FROM {self.table_names[table_name]} WHERE parent_id IN("
-                            f"SELECT id FROM {table_name} WHERE title = %s)", (title,))
-        page_id_tuple = self.cursor.fetchone()
-        return page_id_tuple[0] if page_id_tuple else None
+    def is_link_cashed(self, table_name: str, link_id: int) -> tuple[int] | None:
+        self.cursor.execute(f"SELECT EXISTS("
+                            f"SELECT parent_id FROM {self.table_names[table_name]} "
+                            f"WHERE parent_id = %s);", (link_id,))
+        return self.cursor.fetchone()
 
-    def get_related_pages(self, table_name: str, page_id: int) -> list[str, ...]:
-        self.cursor.execute(f"SELECT title FROM {table_name} WHERE id IN ("
+    def get_link_if_cached(self, table_name: str, title: str) -> tuple[int] | None:
+        # print(f'{table_name=} {title=} ')
+        self.cursor.execute(f"SELECT parent_id FROM {self.table_names[table_name]} "
+                            f"WHERE parent_id IN("
+                            f"SELECT id FROM {table_name} WHERE title = %s"
+                            f")", (title,))
+        return self.cursor.fetchone()
+
+    def get_related_pages(self, table_name: str, page_id: int) -> list[tuple[int], tuple[str]]:
+        self.cursor.execute(f"SELECT id, title FROM {table_name} WHERE id IN ("
                             f"SELECT child_id FROM {self.table_names[table_name]} "
                             f"WHERE parent_id = %s)", (page_id,))
-        return [link[0] for link in self.cursor.fetchall()]
+        return self.cursor.fetchall()
 
     def cache_pages_relations(self, table_name: str, parent_id: str, children_ids: list):
         """Stores page names and uris in links table and creates Many-to-Many relations'"""

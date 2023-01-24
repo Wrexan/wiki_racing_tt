@@ -18,36 +18,46 @@ class Scrapper:
     def scrap_for_linked_pages(self,
                                url: str,
                                href_mask: Pattern,
-                               limit: int) -> list:
+                               limit: int) -> list | None:
         self.make_delay_before_next_request()
         r = requests.get(url)
+        if r.status_code != 200:
+            print(f'Connection error for {url}: {r.status_code=}')
+            return
+
         self.soup = BeautifulSoup(r.text, 'html.parser')
         links = []
 
-        raw_html = self.soup.find('body')
-        if not raw_html:
-            # print(f'Scrapper error: URL have no body: {url}')
-            return links
+        # raw_html = self.soup.body
+        # if not raw_html:
+        #     # print(f'Scrapper error: URL have no body: {url}')
+        #     return links
+        #
+        # raw_html = raw_html.find('div', id='bodyContent')
+        # if not raw_html:
+        #     # print(f'Scrapper error: URL have no id="bodyContent": {url}')
+        #     return links
 
-        raw_html = raw_html.find('div', id='bodyContent')
+        raw_html = self.soup.body.find('div', id='bodyContent')
         if not raw_html:
             # print(f'Scrapper error: URL have no id="bodyContent": {url}')
-            return links
+            return
 
         raw_html = raw_html.find('div', class_='mw-parser-output')
         if not raw_html:
             # print(f'Scrapper error: URL have no class_="mw-parser-output": {url}')
-            return links
+            return
 
         raw_links = raw_html.find_all('a', href=href_mask, class_=None, limit=limit)
         if not raw_links:
             # print(f'Scrapper error: URL have no links: {url}')
-            return links
+            return
 
         for link in raw_links:
-            page_title = link.get('title')
-            if page_title and ':' not in page_title:
-                links.append(page_title)
+            link_title = link.get('title')
+            link_href = link.get('href')
+            if link_title and ':' not in link_href:
+                links.append(link_title)
         return links
 
     # def disassemble_dom(self, url):
