@@ -59,43 +59,47 @@ class WikiRacer:
 
         self.db.cursor.close()
         self.db.connection.close()
-        # return links
+        return self.result_branch
 
     def get_parsed_links(self):
 
         if self.result_found:
             return
         for inner_deepness in range(self.current_deepness + 1):
-            print(f'{self.tree_cache=}')
-            print(f'{inner_deepness=}')
+            # print(f'{self.tree_cache=}')
+            # print(f'{inner_deepness=}')
             for page, links in self.tree_cache[inner_deepness].items():
+                if page and page[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
+                    print(f'{page=}')
                 for link in links:
                     self.page_counter += 1
                     print(f"\r{self.sources[self.current_source]}"
                           f"{self.current_deepness}-Parsed: "
                           f"{self.page_counter}", end="")
-                    print(f'{link=} ')
+                    if link[1] in ('Бактерії', 'Вітамін K', 'Аденозинтрифосфат'):
+                        print(f'{page=} => {link=} ')
 
-                    pages = self.get_links_from_db_or_parser(link)
-                    # {1: {start: [second, third]}, 2: {second: [fourth, fifth], third: [sixth, seventh]}}
+                    links_on_page = self.get_links_from_db_or_parser(link)
+                    # add branches to wide
                     if not self.tree_cache.get(inner_deepness+1):
                         self.tree_cache[inner_deepness+1] = {}
-                    self.tree_cache[inner_deepness+1][link] = pages
+                    self.tree_cache[inner_deepness+1][link] = links_on_page
 
                     # do the link is finish?
-                    if link[1] == self.finish_page_name:
-                        self.result_branch.append(self.finish_page_name)
-                        page_to_check = link
-                        for revers_deepness in range(inner_deepness, 0, -1):
-                            # print(f'+++{revers_deepness=} {page_to_check=}')
-                            for backward_page, backward_links in self.tree_cache[revers_deepness].items():
-                                if page_to_check in backward_links:
-                                    page_to_check = backward_page
-                                    self.result_branch.append(page_to_check[1])
-                        self.result_branch.reverse()
-                        self.result_found = True
-                        print('')
-                        return
+                    for next_link in links_on_page:
+                        print(f'{next_link=}')
+                        if self.finish_page_name == next_link[1]:
+                            self.result_branch.append(self.finish_page_name)
+                            page_to_check = next_link
+                            for revers_deepness in range(inner_deepness + 1, 0, -1):
+                                for backward_page, backward_links in self.tree_cache[revers_deepness].items():
+                                    if page_to_check in backward_links:
+                                        page_to_check = backward_page
+                                        self.result_branch.append(page_to_check[1])
+                            self.result_branch.reverse()
+                            self.result_found = True
+                            print('')
+                            return
 
     def get_links_from_db_or_parser(self, current_page):
         # cached = self.db.is_link_cashed(self.table_name, current_page[0])
