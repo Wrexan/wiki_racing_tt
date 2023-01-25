@@ -71,7 +71,6 @@ class DBController:
         return self.cursor.fetchone()
 
     def get_link_if_cached(self, table_name: str, title: str) -> tuple[int] | None:
-        # print(f'{table_name=} {title=} ')
         self.cursor.execute(f"SELECT parent_id FROM {self.table_names[table_name]} "
                             f"WHERE parent_id IN("
                             f"SELECT id FROM {table_name} WHERE title = %s"

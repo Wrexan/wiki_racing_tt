@@ -135,5 +135,6 @@ if __name__ == '__main__':
     print(f'Most popular: {game.db.get_most_popular_titles(game.table_name, amount=5)}')
     print(f'Most recursive: {game.db.get_titles_with_most_links(game.table_name, amount=5)}')
     title = "Дружба"
-    print(f'Average 2ng deep links for "{title}": {game.db.get_average_link_number_for_deep_2(game.table_name, title=title)[0]}')
+    print(f'Average 2ng deep links for "{title}": '
+          f'{game.db.get_average_link_number_for_deep_2(game.table_name, title=title)[0]}')
 
