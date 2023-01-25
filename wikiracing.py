@@ -121,7 +121,7 @@ class WikiRacer:
             cached_id = cached[0]
             self.current_source = 0
 
-        return self.db.get_related_pages(self.table_name, cached_id) if cached_id else None
+        return self.db.get_title_links(self.table_name, cached_id) if cached_id else None
 
 
 if __name__ == '__main__':
@@ -132,9 +132,8 @@ if __name__ == '__main__':
     game.find_path('Фестиваль', 'Пілястра')
     game.find_path('Дружина (військо)', '6 жовтня')
 
-    print(f'Most popular: {game.db.get_most_popular_titles(table_name=game.table_name, amount=5)}')
+    print(f'Most popular: {game.db.get_most_popular_titles(game.table_name, amount=5)}')
+    print(f'Most recursive: {game.db.get_titles_with_most_links(game.table_name, amount=5)}')
+    title = "Дружба"
+    print(f'Average 2ng deep links for "{title}": {game.db.get_average_link_number_for_deep_2(game.table_name, title=title)[0]}')
 
-    # game.find_path('Географія Бутану', 'Федеральний округ')
-
-    # game.find_path('Дружба', 'Столиця')
-    # game.find_path('Бактерії', 'Китайський календар')

@@ -2,6 +2,7 @@ __pycache__
 .idea
 *.ini
 *.pyc
+*.log
 task*.jpg
 
 instance/

@@ -78,7 +78,7 @@ class DBController:
                             f")", (title,))
         return self.cursor.fetchone()
 
-    def get_related_pages(self, table_name: str, page_id: int) -> list[tuple[int], tuple[str]]:
+    def get_title_links(self, table_name: str, page_id: int) -> list[tuple[int], tuple[str]]:
         self.cursor.execute(f"SELECT id, title FROM {table_name} WHERE id IN ("
                             f"SELECT child_id FROM {self.table_names[table_name]} "
                             f"WHERE parent_id = %s)", (page_id,))
@@ -126,10 +126,13 @@ class DBController:
         # self.connection.commit()
         return parent_id
 
-    def get_most_popular_titles(self, table_name: str, amount: int) -> list[tuple[int, str]]:
+    def prepare_connection(self, table_name: str):
         if not self.cursor or self.cursor.closed:
             self.create_connection()
         self.table_names[table_name] = f'{table_name}_{table_name}'
+
+    def get_most_popular_titles(self, table_name: str, amount: int) -> list[tuple[str, int]]:
+        self.prepare_connection(table_name)
 
         query = f"SELECT " \
                 f"(SELECT title FROM {table_name} WHERE {table_name}.id = parent_id), count(child_id) co " \
@@ -140,5 +143,42 @@ class DBController:
                 f"ORDER BY co DESC " \
                 f"LIMIT {amount}"
         self.cursor.execute(query)
-        return self.cursor.fetchall()
+        most_popular_titles = self.cursor.fetchall()
+        self.cursor.close()
+        self.connection.close()
+        return most_popular_titles
+
+    def get_titles_with_most_links(self, table_name: str, amount: int) -> list[tuple[str, int]]:
+        self.prepare_connection(table_name)
+
+        query = f"SELECT " \
+                f"(SELECT title FROM {table_name} WHERE {table_name}.id = parent_id), count(child_id) co " \
+                f"FROM {self.table_names[table_name]} "\
+                f"WHERE child_id != parent_id " \
+                f"GROUP BY parent_id " \
+                f"ORDER BY co DESC " \
+                f"LIMIT {amount}"
+        self.cursor.execute(query)
+
+        titles_with_most_links = self.cursor.fetchall()
+        self.cursor.close()
+        self.connection.close()
+        return titles_with_most_links
+
+    def get_average_link_number_for_deep_2(self, table_name: str, title: str) -> list:
+        self.prepare_connection(table_name)
+
+        query = f"SELECT ROUND(AVG(links)) FROM (SELECT count(child_id) AS links " \
+                f"FROM {self.table_names[table_name]} "\
+                f"WHERE parent_id in (" \
+                f"  SELECT child_id FROM {self.table_names[table_name]} " \
+                f"  WHERE parent_id = " \
+                f"      (SELECT id FROM {table_name} WHERE {table_name}.title = %s)) " \
+                f"GROUP BY parent_id) as link_numbers_table"
+        self.cursor.execute(query, (title,))
+
+        titles_with_most_links = self.cursor.fetchone()
+        self.cursor.close()
+        self.connection.close()
+        return titles_with_most_links
 
