@@ -24,10 +24,11 @@ class WikiRacer:
         self.max_deepness = 5
         self.finish_page_name: str = ''
         self.tree_cache: dict[int: dict[str: list[str, ...]]] = {}
+        self.path_cache: dict[int: str] = {}
         self.sources = {0: 'DB', 1: 'WB'}
         self.current_source = 1
 
-        self.result_branch: list = []
+        # self.result_branch: list = []
         self.current_deepness = 0
         self.page_counter = 0
         self.start_time = 0
@@ -35,7 +36,7 @@ class WikiRacer:
 
     def find_path(self, start: str, finish: str) -> List[str]:
         self.page_counter = 0
-        self.result_branch = []
+        # self.result_branch = []
         self.result_found = False
         self.start_time = time.time()
 
@@ -55,14 +56,16 @@ class WikiRacer:
             self.get_parsed_links()
 
             if self.result_found:
-                print(f'RESULT: {self.result_branch} TIME: {round(time.time() - self.start_time, 2)}')
                 break
+        result = list(self.path_cache.values())
+        if self.result_found:
+            print(f'RESULT: {result} TIME: {round(time.time() - self.start_time, 2)}')
         else:
-            print(f'NOT FOUND. LAST RESULT = {self.result_branch}')
+            print(f'NOT FOUND. LAST RESULT = {result}')
 
         self.db.cursor.close()
         self.db.connection.close()
-        return self.result_branch
+        return result
 
     def get_parsed_links(self):
 
@@ -70,6 +73,12 @@ class WikiRacer:
             return
         for inner_deepness in range(self.current_deepness + 1):
             for page, links in self.tree_cache[inner_deepness].items():
+                if page:
+                    self.path_cache[inner_deepness] = page[1]
+
+                # if page and page[1] in ('Дружина (військо)', 'Олег'):
+                #     print(f'\n{page[1]}: {links=}')
+
                 for link in links:
                     self.page_counter += 1
                     print(f"\r{self.sources[self.current_source]}"
@@ -83,27 +92,39 @@ class WikiRacer:
                     # add branches to wide
                     if not self.tree_cache.get(inner_deepness + 1):
                         self.tree_cache[inner_deepness + 1] = {}
+                    # if not self.tree_cache[inner_deepness + 1].get(link):
                     self.tree_cache[inner_deepness + 1][link] = links_on_page
+                    # self.tree_cache[inner_deepness + 1][link].extend(links_on_page)
+                    # print(f'{page=} {link=} ')
 
                     # do the link is finish?
                     for next_link in links_on_page:
-                        if self.finish_page_name == next_link[1]:
-                            self.result_branch.append(self.finish_page_name)
-                            self.result_branch.append(link[1])
-                            page_to_check = link
-                            for revers_deepness in range(inner_deepness, 0, -1):
-                                checked_upper_links = []
-                                for upper_parent_page, upper_links in self.tree_cache[revers_deepness].items():
-                                    if page_to_check in upper_links and upper_parent_page not in checked_upper_links:
-                                        page_to_check = upper_parent_page
-                                        self.result_branch.append(page_to_check[1])
-                                        checked_upper_links = [*upper_links]
-                            self.result_branch.reverse()
+                        if next_link[1] == self.finish_page_name:
+                            # self.result_branch.append(self.finish_page_name)
+                            # self.result_branch.append(link[1])
+                            # self.result_branch.append(page[1])
+                            self.path_cache[inner_deepness+1] = link[1]
+                            self.path_cache[inner_deepness+2] = self.finish_page_name
+
+                            # print(f'\n{self.path_cache=}')
+
+                            # page_to_check = link
+                            # for revers_deepness in range(inner_deepness, 0, -1):
+                            #     checked_upper_links = []
+                            #     for upper_parent_page, upper_links in self.tree_cache[revers_deepness].items():
+                            #         if page_to_check in upper_links\
+                            #                     and upper_parent_page not in checked_upper_links:
+                            #             print(f'{page_to_check=} {upper_parent_page=} {checked_upper_links=} ')
+                            #             page_to_check = upper_parent_page
+                            #             self.result_branch.append(page_to_check[1])
+                            #             checked_upper_links = [*upper_links]
+                            # self.result_branch.reverse()
                             self.result_found = True
                             print('')
                             return
 
     def get_links_from_db_or_parser(self, current_page):
+        # print(f'{current_page=}')
         cached: tuple = self.db.get_link_if_cached(self.table_name, current_page[1])
 
         if not cached:
@@ -137,4 +158,3 @@ if __name__ == '__main__':
     title = "Дружба"
     print(f'Average 2ng deep links for "{title}": '
           f'{game.db.get_average_link_number_for_deep_2(game.table_name, title=title)[0]}')
-
