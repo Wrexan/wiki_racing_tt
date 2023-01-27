@@ -83,6 +83,14 @@ class DBController:
                             f"WHERE parent_id = %s)", (page_id,))
         return self.cursor.fetchall()
 
+    def get_title_links_if_cached(self, table_name: str, title: str) -> list[tuple[int], tuple[str]]:
+        self.cursor.execute(f"SELECT id, title FROM {table_name} WHERE id IN ("
+                            f"SELECT child_id FROM {self.table_names[table_name]} "
+                            f"WHERE parent_id = "
+                            f"(SELECT id FROM {table_name} "
+                            f"WHERE title = %s))", (title,))
+        return self.cursor.fetchall()
+
     def cache_pages_relations(self, table_name: str, parent_id: str, children_ids: list):
         """Stores page names and uris in links table and creates Many-to-Many relations'"""
         # prepare relation table name and dict of all links taken

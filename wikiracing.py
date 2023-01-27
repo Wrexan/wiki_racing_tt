@@ -99,25 +99,22 @@ class WikiRacer:
                             print('')
                             return
 
-    def get_links_from_db_or_parser(self, current_page):
-        cached: tuple = self.db.get_link_if_cached(self.table_name, current_page[1])
+    def get_links_from_db_or_parser(self, current_page_title):
+        links_of_cached_title: list = self.db.get_title_links_if_cached(self.table_name, current_page_title[1])
 
-        if not cached:
-            cached_id = None
-            current_uri = f'{self.uri_to_parse}{current_page[1]}'
-            pages = self.scrapper.scrap_for_linked_pages(
-                url=f'{self.site_to_parse}{current_uri}',
-                href_mask=self.href_mask,
-                limit=links_per_page)
-            if pages:
-                cached_id = self.db.cache_pages_relations(self.table_name, current_page[1], pages)
-            self.current_source = 1
-
-        else:
-            cached_id = cached[0]
+        if links_of_cached_title:
             self.current_source = 0
+            return links_of_cached_title
 
-        return self.db.get_title_links(self.table_name, cached_id) if cached_id else None
+        current_uri = f'{self.uri_to_parse}{current_page_title[1]}'
+        pages = self.scrapper.scrap_for_linked_pages(
+            url=f'{self.site_to_parse}{current_uri}',
+            href_mask=self.href_mask,
+            limit=links_per_page)
+        if pages:
+            cached_id = self.db.cache_pages_relations(self.table_name, current_page_title[1], pages)
+            self.current_source = 1
+            return self.db.get_title_links(self.table_name, cached_id)
 
 
 if __name__ == '__main__':
@@ -128,6 +125,7 @@ if __name__ == '__main__':
     game.find_path('Фестиваль', 'Пілястра')
     game.find_path('Дружина (військо)', '6 жовтня')
 
+    print('\n')
     print(f'Most popular: {game.db.get_most_popular_titles(game.table_name, amount=5)}')
     print(f'Most recursive: {game.db.get_titles_with_most_links(game.table_name, amount=5)}')
     title = "Дружба"
